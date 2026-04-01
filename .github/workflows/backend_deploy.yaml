@@ -19,29 +19,34 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
           node-version: 22
 
-      - name: Install pnpm
+      - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
           version: 10
           run_install: false
 
-      - name: Deploy Backend for ${{ github.ref_name }}
+      # 🔥 关键：彻底关闭 pnpm 安全限制
+      - name: Fix pnpm security (CRITICAL)
         run: |
-          # ✅ 关键：开启 pnpm scripts（修复 exit code 1）
+          echo "ignore-scripts=false" >> .npmrc
+          echo "unsafe-perm=true" >> .npmrc
           pnpm config set ignore-scripts false
+          pnpm config set enable-pre-post-scripts true
 
+      - name: Deploy Backend
+        run: |
           export use_worker_assets=${{ secrets.USE_WORKER_ASSETS }}
           export use_worker_assets_with_telegram=${{ secrets.USE_WORKER_ASSETS_WITH_TELEGRAM }}
-          
+
           # ===== 前端构建 =====
           if [ -n "$use_worker_assets" ]; then
             cd frontend/
-            pnpm install --no-frozen-lockfile --ignore-scripts=false
+            pnpm install --no-frozen-lockfile --ignore-scripts=false --unsafe-perm
             if [ -n "$use_worker_assets_with_telegram" ]; then
               echo "Building with telegram pages"
               pnpm build:telegram:pages
@@ -54,15 +59,15 @@ jobs:
 
           export debug_mode=${{ secrets.DEBUG_MODE }}
           export use_mail_wasm_parser=${{ secrets.BACKEND_USE_MAIL_WASM_PARSER }}
-          
+
           # ===== 后端部署 =====
           cd worker/
 
-          # 写入 wrangler.toml（来自 GitHub Secret）
+          # 写入 wrangler.toml
           printf '%s\n' "$WRANGLER_TOML_CONTENT" > wrangler.toml
-          
-          # 安装依赖（关键修复点）
-          pnpm install --no-frozen-lockfile --ignore-scripts=false
+
+          # 安装依赖（🔥 关键修复）
+          pnpm install --no-frozen-lockfile --ignore-scripts=false --unsafe-perm
 
           # 可选 wasm parser
           if [ -n "$use_mail_wasm_parser" ]; then
@@ -72,22 +77,11 @@ jobs:
             echo "Applied mail-parser-wasm-worker patch"
           fi
 
-          # 部署
-          if [ "$debug_mode" = "true" ]; then
-            echo "Running deploy with full logs..."
-            pnpm run deploy
-          else
-            echo "Running deploy (silent mode)..."
-            if pnpm run deploy >/dev/null 2>&1; then
-              echo "Deploy succeeded"
-            else
-              code=$?
-              echo "Command failed with exit code $code"
-              exit "$code"
-            fi
-          fi
+          # 🚀 部署（强制显示日志）
+          echo "Running deploy with full logs..."
+          pnpm run deploy
 
-          echo "Deployed for tag ${{ github.ref_name }}"
+          echo "Deployed successfully"
 
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
