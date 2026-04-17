@@ -1,6 +1,6 @@
 import { Context } from 'hono';
 import i18n from '../i18n';
-import utils, { getBooleanValue, hashPassword, checkCfTurnstile } from '../utils';
+import utils, { getBooleanValue, hashPassword, checkCfTurnstile, timingSafeEqualString } from '../utils';
 import { Jwt } from 'hono/utils/jwt';
 
 export default {
