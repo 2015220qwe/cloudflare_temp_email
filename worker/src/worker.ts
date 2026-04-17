@@ -31,8 +31,10 @@ const app = new Hono<HonoCustomType>()
 app.use('/*', cors());
 // error handler
 app.onError((err, c) => {
+	// Log full error server-side for debugging, but do not leak internal
+	// details (DB errors, stack traces, library internals) to the client.
 	console.error(err)
-	return c.text(`${err.name} ${err.message}`, 500)
+	return c.text("Internal Server Error", 500)
 })
 // global middlewares
 app.use('/*', async (c, next) => {

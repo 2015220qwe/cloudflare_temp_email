@@ -16,7 +16,17 @@ export default {
         if (!setting) {
             return c.text(msgs.Oauth2ClientIDNotFoundMsg, 400);
         }
-        const url = `${setting.authorizationURL}?client_id=${setting.clientID}&response_type=code&redirect_uri=${setting.redirectURL}&scope=${setting.scope}&state=${state}`
+        // URL-encode all query parameters to prevent parameter injection
+        // (e.g. a crafted `state` containing `&` could otherwise smuggle
+        // additional parameters into the authorize URL).
+        const params = new URLSearchParams({
+            client_id: setting.clientID,
+            response_type: 'code',
+            redirect_uri: setting.redirectURL,
+            scope: setting.scope,
+            state: state || '',
+        });
+        const url = `${setting.authorizationURL}?${params.toString()}`;
         return c.json({ url });
     },
     oauth2Login: async (c: Context<HonoCustomType>) => {

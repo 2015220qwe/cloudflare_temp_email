@@ -12,6 +12,12 @@
 
 ### Bug Fixes
 
+- fix: |Security| Global `onError` no longer returns raw error name and message to the client, preventing internal details (DB errors, stack traces) from leaking
+- fix: |Security| Login endpoints (site login, admin login, user login, address password login) now use constant-time comparison for passwords/hashes to mitigate timing side-channel attacks
+- fix: |Security| `handleListQuery` validates `orderBy` against a strict whitelist (`<identifier>[.<identifier>] (asc|desc)`) as defense-in-depth against SQL injection from any unvetted caller
+- fix: |Security| OAuth2 login URL now uses `URLSearchParams` to prevent parameter-smuggling via a crafted `state` value
+- fix: |Security| Bumped `hono` to `^4.12.14` to pick up several upstream security advisories (GHSA)
+
 ### Improvements
 
 ## v1.5.0(main)

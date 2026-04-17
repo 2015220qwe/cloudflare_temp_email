@@ -590,12 +590,20 @@ export const deleteAddressWithData = async (
     return true;
 }
 
+/**
+ * Accept only simple ORDER BY clauses of the form:
+ *   <identifier>[.<identifier>] (asc|desc)
+ * e.g. "id desc", "a.created_at asc". This defends against SQL injection
+ * even if a caller forgets to pre-validate `orderBy`.
+ */
+const ORDER_BY_RE = /^[a-zA-Z_][a-zA-Z0-9_]*(?:\.[a-zA-Z_][a-zA-Z0-9_]*)? (asc|desc)$/i;
+
 export const handleListQuery = async (
     c: Context<HonoCustomType>,
     query: string, countQuery: string, params: string[],
     limit: string | number | undefined | null,
     offset: string | number | undefined | null,
-    /** Must be pre-validated (e.g. whitelist), NOT raw user input. Interpolated directly into SQL. */
+    /** Must match ORDER_BY_RE; rejected otherwise to prevent SQL injection. */
     orderBy?: string
 ): Promise<Response> => {
     const msgs = i18n.getMessagesbyContext(c);
@@ -612,6 +620,10 @@ export const handleListQuery = async (
         return c.text(msgs.InvalidOffsetMsg, 400)
     }
     const orderClause = orderBy || 'id desc';
+    if (!ORDER_BY_RE.test(orderClause)) {
+        console.warn("handleListQuery: rejected orderBy", orderClause);
+        return c.text(msgs.OperationFailedMsg || "Invalid order", 400);
+    }
     const resultsQuery = `${query} order by ${orderClause} limit ? offset ?`;
     const { results } = await c.env.DB.prepare(resultsQuery).bind(
         ...params, limit, offset

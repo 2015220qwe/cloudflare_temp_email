@@ -12,6 +12,12 @@
 
 ### Bug Fixes
 
+- fix: |安全| 全局 `onError` 不再向客户端返回原始错误名与错误消息，避免泄露内部实现细节（数据库报错、堆栈信息等）
+- fix: |安全| 登录接口（站点登录、管理员登录、用户登录、地址密码登录）改为使用常量时间比较密码/哈希，防止时序侧信道攻击
+- fix: |安全| `handleListQuery` 对 `orderBy` 参数增加白名单校验（`<identifier>[.<identifier>] (asc|desc)`），对未校验的调用方做纵深防御以阻断 SQL 注入
+- fix: |安全| OAuth2 登录 URL 构造改为使用 `URLSearchParams`，防止 `state` 等参数注入额外查询参数
+- fix: |安全| 升级 `hono` 至 `^4.12.14`，修复多个上游安全公告（GHSA）
+
 ### Improvements
 
 ## v1.5.0(main)
