@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { Jwt } from 'hono/utils/jwt'
 
 import i18n from '../i18n';
-import utils, { checkCfTurnstile, getJsonSetting, checkUserPassword, getUserRoles, getStringValue } from "../utils"
+import utils, { checkCfTurnstile, getJsonSetting, checkUserPassword, getUserRoles, getStringValue, timingSafeEqualString } from "../utils"
 import { CONSTANTS } from "../constants";
 import { GeoData, UserInfo, UserSettings } from "../models";
 import { sendMail } from "../mails_api/send_mail_api";
@@ -200,7 +200,8 @@ export default {
             return c.text(msgs.UserNotFoundMsg, 400)
         }
         // TODO: need check password use random salt
-        if (dbPassword != password) {
+        if (typeof dbPassword !== "string" || typeof password !== "string"
+            || !timingSafeEqualString(dbPassword, password)) {
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
         // create jwt

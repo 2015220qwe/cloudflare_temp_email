@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { Jwt } from 'hono/utils/jwt'
 
-import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword } from '../utils';
+import utils, { checkCfTurnstile, getPasswords, getAdminPasswords, hashPassword, timingSafeIncludes } from '../utils';
 import i18n from '../i18n';
 
 const api = new Hono<HonoCustomType>()
@@ -36,7 +36,7 @@ api.post('/open_api/admin_login', async (c) => {
     }
     const adminPasswords = getAdminPasswords(c);
     const hashedPasswords = await Promise.all(adminPasswords.map(p => hashPassword(p)));
-    if (!hashedPasswords.length || !password || !hashedPasswords.includes(password)) {
+    if (!hashedPasswords.length || !password || !timingSafeIncludes(hashedPasswords, password)) {
         return c.text(msgs.NeedAdminPasswordMsg, 401)
     }
     return c.json({ success: true })

@@ -67,8 +67,9 @@ export default {
             return c.text(msgs.AddressNotFoundMsg, 404);
         }
 
-        // 验证密码
-        if (address.password !== password) {
+        // 验证密码（使用常量时间比较以防止时序侧信道攻击）
+        if (typeof address.password !== "string" || typeof password !== "string"
+            || !timingSafeEqualString(address.password, password)) {
             return c.text(msgs.InvalidEmailOrPasswordMsg, 401);
         }
 

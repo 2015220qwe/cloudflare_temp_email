@@ -224,11 +224,44 @@ export const getAdminPasswords = (c: Context<HonoCustomType>): string[] => {
     return c.env.ADMIN_PASSWORDS.filter((item) => item.length > 0);
 }
 
+/**
+ * Constant-time string comparison. Returns true if strings are equal.
+ * Prevents timing side-channel attacks on secret comparisons (passwords,
+ * tokens, hashes). Uses a bounded-time XOR loop over the longer input so
+ * that early-exit on length mismatch still leaks no content information.
+ */
+export const timingSafeEqualString = (a: string, b: string): boolean => {
+    const aBytes = new TextEncoder().encode(a);
+    const bBytes = new TextEncoder().encode(b);
+    const len = Math.max(aBytes.length, bBytes.length);
+    let diff = aBytes.length ^ bBytes.length;
+    for (let i = 0; i < len; i++) {
+        diff |= (aBytes[i] ?? 0) ^ (bBytes[i] ?? 0);
+    }
+    return diff === 0;
+}
+
+/**
+ * Constant-time membership check. Returns true if `needle` equals any entry
+ * in `haystack`. Always iterates the full list to avoid leaking which entry
+ * matched (or how many entries were compared) via response timing.
+ */
+export const timingSafeIncludes = (haystack: string[], needle: string): boolean => {
+    let found = false;
+    for (const candidate of haystack) {
+        if (timingSafeEqualString(candidate, needle)) {
+            found = true;
+        }
+    }
+    return found;
+}
+
 export const checkIsAdmin = (c: Context<HonoCustomType>): boolean => {
     const adminPasswords = getAdminPasswords(c);
     if (!adminPasswords.length) return false;
     const adminAuth = c.req.raw.headers.get("x-admin-auth");
-    return !!adminAuth && adminPasswords.includes(adminAuth);
+    if (!adminAuth) return false;
+    return timingSafeIncludes(adminPasswords, adminAuth);
 }
 
 export const getEnvStringList = (value: string | string[] | undefined): string[] => {
@@ -412,6 +445,8 @@ export default {
     getPasswords,
     getAdminPasswords,
     checkIsAdmin,
+    timingSafeEqualString,
+    timingSafeIncludes,
     getEnvStringList,
     sendAdminInternalMail,
     isGlobalTurnstileEnabled,
