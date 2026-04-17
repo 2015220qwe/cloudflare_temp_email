@@ -245,7 +245,11 @@ export const sendMail = async (
 }
 
 api.post('/api/send_mail', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { address } = c.get("jwtPayload")
+    if (!address) {
+        return c.text(msgs.InvalidAddressTokenMsg, 401)
+    }
     const reqJson = await c.req.json();
     try {
         await sendMail(c, address, reqJson);
@@ -259,13 +263,23 @@ api.post('/api/send_mail', async (c) => {
 api.post('/external/api/send_mail', async (c) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { token } = await c.req.json();
+    if (!token) {
+        return c.text(msgs.InvalidAddressCredentialMsg, 401)
+    }
+    let address: unknown;
     try {
-        const { address } = await Jwt.verify(token, c.env.JWT_SECRET, "HS256");
-        if (!address) {
-            return c.text(msgs.AddressNotFoundMsg, 400)
-        }
+        const payload = await Jwt.verify(token, c.env.JWT_SECRET, "HS256");
+        address = payload.address;
+    } catch (e) {
+        console.error("Invalid address credential", e);
+        return c.text(msgs.InvalidAddressCredentialMsg, 401)
+    }
+    if (!address || typeof address !== 'string') {
+        return c.text(msgs.InvalidAddressCredentialMsg, 401)
+    }
+    try {
         const reqJson = await c.req.json();
-        await sendMail(c, address as string, reqJson);
+        await sendMail(c, address, reqJson);
         return c.json({ status: "ok" })
     } catch (e) {
         console.error("Failed to send mail", e);

@@ -1,5 +1,6 @@
 import { Context } from "hono";
 import { handleMailListQuery } from "../common";
+import i18n from "../i18n";
 
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
@@ -25,12 +26,19 @@ export default {
         );
     },
     deleteMail: async (c: Context<HonoCustomType>) => {
+        const msgs = i18n.getMessagesbyContext(c);
         const { id } = c.req.param();
+        if (!id) {
+            return c.text(msgs.InvalidInputMsg, 400)
+        }
         const { success } = await c.env.DB.prepare(
             `DELETE FROM raw_mails WHERE id = ? `
         ).bind(id).run();
+        if (!success) {
+            return c.text(msgs.OperationFailedMsg, 500)
+        }
         return c.json({
-            success: success
+            success: true
         })
     }
 }

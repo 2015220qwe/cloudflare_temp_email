@@ -12,6 +12,15 @@
 
 ### Bug Fixes
 
+- fix: |API| Fix several routes missing input validation, inconsistent error responses, and incorrect HTTP status codes:
+  - `/admin/show_password/:id`: return 404 when address not found (previously silently signed a JWT with `null` address)
+  - `/admin/delete_address/:id`, `/admin/address_sender/:id`, `/admin/sendbox/:id`, `/admin/mails/:id`, `/api/mails/:id`: return 500 on DB failure (previously returned 200 with `success: false`)
+  - `/admin/address/:id/reset_password`, `/admin/users/:user_id/reset_password`: return 404 for missing resources, 400 for invalid password (previously returned 500)
+  - `/api/mails`, `/api/mail/:mail_id`, `/api/send_mail`: return 401 when address token missing; return 404 when mail not found
+  - `/external/api/send_mail`: return 401 on JWT verification failure (previously returned 400)
+  - `/user_api/verify_code`, `/user_api/register`: validate email format and password to prevent unvalidated inputs causing 500s
+  - `/admin/send_mail`, `/admin/address_sender`, `/admin/users/bind_address`: add required-field and type validation
+
 ### Improvements
 
 ## v1.5.0(main)

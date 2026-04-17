@@ -23,9 +23,10 @@ api.post('/api/attachment/put_url', s3_attachment.getSignedPutUrl)
 api.post('/api/attachment/get_url', s3_attachment.getSignedGetUrl)
 
 api.get('/api/mails', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { address } = c.get("jwtPayload")
     if (!address) {
-        return c.json({ "error": "No address" }, 400)
+        return c.text(msgs.InvalidAddressTokenMsg, 401)
     }
     const { limit, offset } = c.req.query();
     if (Number.parseInt(offset) <= 0) updateAddressUpdatedAt(c, address);
@@ -37,12 +38,19 @@ api.get('/api/mails', async (c) => {
 })
 
 api.get('/api/mail/:mail_id', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { address } = c.get("jwtPayload")
+    if (!address) {
+        return c.text(msgs.InvalidAddressTokenMsg, 401)
+    }
     const { mail_id } = c.req.param();
+    if (!mail_id) {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
     const result = await c.env.DB.prepare(
         `SELECT * FROM raw_mails where id = ? and address = ?`
     ).bind(mail_id, address).first();
-    if (!result) return c.json(null);
+    if (!result) return c.text(msgs.MailNotFoundMsg, 404);
     return c.json(await resolveRawEmailRow(result));
 })
 
@@ -52,13 +60,22 @@ api.delete('/api/mails/:id', async (c) => {
         return c.text(msgs.UserDeleteEmailDisabledMsg, 403)
     }
     const { address } = c.get("jwtPayload")
+    if (!address) {
+        return c.text(msgs.InvalidAddressTokenMsg, 401)
+    }
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
     // TODO: add toLowerCase() to handle old data
     const { success } = await c.env.DB.prepare(
         `DELETE FROM raw_mails WHERE address = ? and id = ? `
     ).bind(address.toLowerCase(), id).run();
+    if (!success) {
+        return c.text(msgs.OperationFailedMsg, 500)
+    }
     return c.json({
-        success: success
+        success: true
     })
 })
 

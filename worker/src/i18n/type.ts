@@ -45,6 +45,7 @@ export type LocaleMessages = {
     PasswordLoginDisabledMsg: string
     EmailPasswordRequiredMsg: string
     AddressNotFoundMsg: string
+    MailNotFoundMsg: string
 
     // Common messages (merged similar ones)
     OperationFailedMsg: string
