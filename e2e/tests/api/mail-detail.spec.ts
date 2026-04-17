@@ -38,16 +38,14 @@ test.describe('Mail Detail', () => {
     }
   });
 
-  test('fetch non-existent mail returns null', async ({ request }) => {
+  test('fetch non-existent mail returns 404', async ({ request }) => {
     const { jwt } = await createTestAddress(request, 'detail-404');
 
     try {
       const res = await request.get(`${WORKER_URL}/api/mail/99999999`, {
         headers: { Authorization: `Bearer ${jwt}` },
       });
-      expect(res.ok()).toBe(true);
-      const body = await res.json();
-      expect(body).toBeNull();
+      expect(res.status()).toBe(404);
     } finally {
       await deleteAddress(request, jwt);
     }
