@@ -1,6 +1,7 @@
 import { Context } from "hono";
 import { handleMailListQuery } from "../common";
 import UserBindAddressModule from "./bind_address";
+import i18n from "../i18n";
 
 export default {
     getMails: async (c: Context<HonoCustomType>) => {
@@ -26,15 +27,25 @@ export default {
         );
     },
     deleteMail: async (c: Context<HonoCustomType>) => {
+        const msgs = i18n.getMessagesbyContext(c);
         const { id } = c.req.param();
+        if (!id) {
+            return c.text(msgs.InvalidInputMsg, 400)
+        }
         const { user_id } = c.get("userPayload");
         const bindedAddressList = await UserBindAddressModule.getBindedAddressListById(c, user_id);
+        if (bindedAddressList.length <= 0) {
+            return c.text(msgs.AddressNotBindedMsg, 403)
+        }
         const { success } = await c.env.DB.prepare(
             `DELETE FROM raw_mails WHERE id = ?`
             + ` and address IN (${bindedAddressList.map(() => "?").join(",")})`
         ).bind(id, ...bindedAddressList).run();
+        if (!success) {
+            return c.text(msgs.OperationFailedMsg, 500)
+        }
         return c.json({
-            success: success
+            success: true
         })
     }
 }

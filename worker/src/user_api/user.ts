@@ -11,6 +11,9 @@ export default {
     verifyCode: async (c: Context<HonoCustomType>) => {
         const { email, cf_token } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
+        if (!email || typeof email !== 'string' || !email.includes('@')) {
+            return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
+        }
         // check cf turnstile
         try {
             await checkCfTurnstile(c, cf_token);
@@ -78,10 +81,14 @@ export default {
         }
         // check request
         const { email, password, code, cf_token } = await c.req.json();
-        if (!email || !password) {
+        if (!email || typeof email !== 'string' || !email.includes('@') || !password) {
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
-        checkUserPassword(password);
+        try {
+            checkUserPassword(password);
+        } catch (e) {
+            return c.text((e as Error).message || msgs.InvalidEmailOrPasswordMsg, 400)
+        }
         // check cf turnstile only when mail verify is disabled
         // (when enabled, verify_code endpoint already checks turnstile)
         if (!settings.enableMailVerify) {

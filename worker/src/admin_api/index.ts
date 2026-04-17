@@ -122,6 +122,9 @@ api.post('/admin/new_address', async (c) => {
 api.delete('/admin/delete_address/:id', async (c) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidAddressIdMsg, 400)
+    }
     const { success } = await c.env.DB.prepare(
         `DELETE FROM address WHERE id = ? `
     ).bind(id).run();
@@ -139,11 +142,17 @@ api.delete('/admin/delete_address/:id', async (c) => {
         `DELETE FROM address_sender WHERE address IN`
         + ` (select name from address where id = ?) `
     ).bind(id).run();
+    if (!sendAccess) {
+        return c.text(msgs.OperationFailedMsg, 500)
+    }
     const { success: usersAddressSuccess } = await c.env.DB.prepare(
         `DELETE FROM users_address WHERE address_id = ?`
     ).bind(id).run();
+    if (!usersAddressSuccess) {
+        return c.text(msgs.OperationFailedMsg, 500)
+    }
     return c.json({
-        success: success && mailSuccess && sendAccess && usersAddressSuccess
+        success: true
     })
 })
 
@@ -178,10 +187,17 @@ api.delete('/admin/clear_sent_items/:id', async (c) => {
 })
 
 api.get('/admin/show_password/:id', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidAddressIdMsg, 400)
+    }
     const name = await c.env.DB.prepare(
         `SELECT name FROM address WHERE id = ? `
     ).bind(id).first("name");
+    if (!name) {
+        return c.text(msgs.AddressNotFoundMsg, 404)
+    }
     const jwt = await Jwt.sign({
         address: name,
         address_id: id
@@ -194,6 +210,9 @@ api.get('/admin/show_password/:id', async (c) => {
 api.post('/admin/address/:id/reset_password', async (c) => {
     const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidAddressIdMsg, 400);
+    }
     const { password } = await c.req.json();
     // 检查功能是否启用
     if (!getBooleanValue(c.env.ENABLE_ADDRESS_PASSWORD)) {
@@ -202,6 +221,14 @@ api.post('/admin/address/:id/reset_password', async (c) => {
 
     if (!password) {
         return c.text(msgs.NewPasswordRequiredMsg, 400);
+    }
+
+    // 确认地址存在，避免对不存在的 id 静默返回成功
+    const exists = await c.env.DB.prepare(
+        `SELECT id FROM address WHERE id = ?`
+    ).bind(id).first("id");
+    if (!exists) {
+        return c.text(msgs.AddressNotFoundMsg, 404);
     }
 
     const hashedPassword = await hashPassword(password);
@@ -245,6 +272,9 @@ api.post('/admin/address_sender', async (c) => {
     if (!address_id) {
         return c.text(msgs.InvalidAddressIdMsg, 400)
     }
+    if (typeof balance !== 'number' || !Number.isFinite(balance) || balance < 0) {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
     enabled = enabled ? 1 : 0;
     const { success } = await c.env.DB.prepare(
         `UPDATE address_sender SET enabled = ?, balance = ? WHERE id = ? `
@@ -262,12 +292,19 @@ api.post('/admin/address_sender', async (c) => {
 })
 
 api.delete('/admin/address_sender/:id', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidAddressIdMsg, 400)
+    }
     const { success } = await c.env.DB.prepare(
         `DELETE FROM address_sender WHERE id = ? `
     ).bind(id).run();
+    if (!success) {
+        return c.text(msgs.OperationFailedMsg, 500)
+    }
     return c.json({
-        success: success
+        success: true
     })
 })
 
@@ -288,12 +325,19 @@ api.get('/admin/sendbox', async (c) => {
 })
 
 api.delete('/admin/sendbox/:id', async (c) => {
+    const msgs = i18n.getMessagesbyContext(c);
     const { id } = c.req.param();
+    if (!id) {
+        return c.text(msgs.InvalidInputMsg, 400)
+    }
     const { success } = await c.env.DB.prepare(
         `DELETE FROM sendbox WHERE id = ? `
     ).bind(id).run();
+    if (!success) {
+        return c.text(msgs.OperationFailedMsg, 500)
+    }
     return c.json({
-        success: success
+        success: true
     })
 })
 

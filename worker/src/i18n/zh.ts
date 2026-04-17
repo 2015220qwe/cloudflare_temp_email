@@ -47,6 +47,7 @@ const messages: LocaleMessages = {
     PasswordLoginDisabledMsg: "密码登录已禁用",
     EmailPasswordRequiredMsg: "邮箱和密码不能为空",
     AddressNotFoundMsg: "邮箱地址不存在",
+    MailNotFoundMsg: "邮件不存在",
 
     // Common messages (merged similar ones)
     OperationFailedMsg: "操作失败",

@@ -12,6 +12,15 @@
 
 ### Bug Fixes
 
+- fix: |API| 修复若干路由缺失输入校验、错误响应不一致及 HTTP 状态码不正确的问题：
+  - `/admin/show_password/:id`：地址不存在时返回 404（此前会静默签发含 `null` 地址的 JWT）
+  - `/admin/delete_address/:id`、`/admin/address_sender/:id`、`/admin/sendbox/:id`、`/admin/mails/:id`、`/api/mails/:id`：删除失败时返回 500（此前返回 200 带 `success: false`）
+  - `/admin/address/:id/reset_password`、`/admin/users/:user_id/reset_password`：对不存在的资源返回 404，密码校验失败返回 400（此前返回 500）
+  - `/api/mails`、`/api/mail/:mail_id`、`/api/send_mail`：缺失地址令牌时返回 401；邮件不存在时返回 404
+  - `/external/api/send_mail`：JWT 校验失败返回 401（此前返回 400）
+  - `/user_api/verify_code`、`/user_api/register`：校验邮箱格式与密码，避免未校验输入导致的 500
+  - `/admin/send_mail`、`/admin/address_sender`、`/admin/users/bind_address`：补充必填字段与类型校验
+
 ### Improvements
 
 ## v1.5.0(main)

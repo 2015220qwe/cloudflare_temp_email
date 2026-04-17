@@ -66,12 +66,16 @@ export default {
         if (!email || !password) {
             return c.text(msgs.InvalidEmailOrPasswordMsg, 400)
         }
+        try {
+            checkUserPassword(password);
+        } catch (e) {
+            return c.text((e as Error).message || msgs.InvalidEmailOrPasswordMsg, 400)
+        }
         // geo data
         const reqIp = c.req.raw.headers.get("cf-connecting-ip")
         const geoData = new GeoData(reqIp, c.req.raw.cf as any);
         const userInfo = new UserInfo(geoData, email);
         try {
-            checkUserPassword(password);
             const { success } = await c.env.DB.prepare(
                 `INSERT INTO users (user_email, password, user_info)`
                 + ` VALUES (?, ?, ?)`
@@ -109,9 +113,20 @@ export default {
         const { user_id } = c.req.param();
         const { password } = await c.req.json();
         const msgs = i18n.getMessagesbyContext(c);
-        if (!user_id) return c.text(msgs.UserNotFoundMsg, 400);
+        if (!user_id) return c.text(msgs.InvalidUserIdMsg, 400);
+        if (!password) return c.text(msgs.NewPasswordRequiredMsg, 400);
         try {
             checkUserPassword(password);
+        } catch (e) {
+            return c.text((e as Error).message || msgs.InvalidInputMsg, 400);
+        }
+        const exists = await c.env.DB.prepare(
+            `SELECT id FROM users WHERE id = ?`
+        ).bind(user_id).first("id");
+        if (!exists) {
+            return c.text(msgs.UserNotFoundMsg, 404);
+        }
+        try {
             const { success } = await c.env.DB.prepare(
                 `UPDATE users SET password = ? WHERE id = ?`
             ).bind(password, user_id).run();
@@ -151,9 +166,16 @@ export default {
         return c.json({ success: true })
     },
     bindAddress: async (c: Context<HonoCustomType>) => {
+        const msgs = i18n.getMessagesbyContext(c);
         const {
             user_email, address, user_id, address_id
         } = await c.req.json();
+        if (!user_id && !user_email) {
+            return c.text(msgs.InvalidUserIdMsg, 400);
+        }
+        if (!address_id && !address) {
+            return c.text(msgs.InvalidAddressIdMsg, 400);
+        }
         const db_user_id = user_id ?? await c.env.DB.prepare(
             `SELECT id FROM users WHERE user_email = ?`
         ).bind(user_email).first<number | undefined | null>("id");
